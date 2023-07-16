@@ -3,12 +3,11 @@ services:
   db:
     image: postgres:14.8
     restart: always
-    environment:
-      POSTGRES_DB: postgres
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+    env_file:
+      - ./env/postgres
+      - ./env/${APP_MODE}/app_database
     ports:
-      - '5431:5432'
+      - '${CHAT_POSTGRES_PORT}:5432'
     volumes:
       - ./docker/postgres/data:/var/lib/postgresql/data
       - ./docker/postgres/sql:/sql
