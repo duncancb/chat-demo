@@ -5,9 +5,9 @@ services:
     restart: always
     env_file:
       - ./env/postgres
-      - ./env/${APP_MODE}/app_database
+      - ./env/${APP_MODE:-dev}/app_database
     ports:
-      - '${CHAT_POSTGRES_PORT}:5432'
+      - '${CHAT_POSTGRES_PORT:-5431}:5432'
     volumes:
       - ./docker/postgres/data:/var/lib/postgresql/data
       - ./docker/postgres/sql:/sql
