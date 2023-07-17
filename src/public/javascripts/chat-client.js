@@ -4,8 +4,14 @@ const sendButton = document.querySelector("button");
 const audioNewMention = document.querySelector("#audio-new-mention");
 var messagesLoaded = false;
 
+function isMentionCheck(text, userName) {
+  userName = userName.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+  index = text.search(new RegExp("\\b"+userName+"\\b", "i"));
+  return index > 0 && text[index - 1] == '@';
+}
+
 function createMessage(text, user=null) {
-  const isMention = text.search(`@${userName}`) > -1;
+  const isMention = isMentionCheck(text, userName);
   const messageElement = document.createElement("div");
   messageElement.className = "chat-message";
   const subMessageElement = document.createElement("div");
