@@ -19,19 +19,6 @@ CREATE TABLE IF NOT EXISTS messages (
 CREATE INDEX IF NOT EXISTS ix_messages_created_at ON messages (sent_at);
 
 
--- Creation of message_ats table
-CREATE TABLE IF NOT EXISTS message_ats (
-  id SERIAL,
-  message_id INT NOT NULL REFERENCES messages(id),
-  to_user_id INT NOT NULL REFERENCES users(id),
-  acknowledged_at TIMESTAMP DEFAULT NULL,
-  PRIMARY KEY (id)
-);
--- Partial index which tracks ONLY unacknowledged "ats"
-CREATE INDEX IF NOT EXISTS ix_message_ats_acknowledged_at ON message_ats (message_id)
-WHERE acknowledged_at IS NULL;
-
-
 -- Insert some users (create user and user login not implemented)
 INSERT INTO users (user_name)
 VALUES ('bob'), ('susan'), ('chatty'), ('anon'), ('anon2');

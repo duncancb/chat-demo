@@ -2,6 +2,7 @@ const messageBox = document.querySelector("#messages");
 const textBox = document.querySelector("input");
 const sendButton = document.querySelector("button");
 const audioNewMention = document.querySelector("#audio-new-mention");
+var messagesLoaded = false;
 
 function createMessage(text, user=null) {
   const isMention = text.search(`@${userName}`) > -1;
@@ -53,6 +54,47 @@ socket.on("connection-refused", (message) => {
   createMessage(`Connection refused for "${userName}". ` + message);
 });
 
+socket.on("old-messages-ready", (oldMessages) => {
+  if( messagesLoaded === false ) {
+    // Try to display all old messages
+    if( oldMessages === false ) {
+      // Inform the user that messages could not be reloaded.
+      createMessage("Failed to load old messages");
+    } else {
+      // Display all previously saved messages
+      for(let message of oldMessages) {
+        createMessage(message.content, {
+          id: message.from_user_id, userName: message.user_name});
+      }
+      messagesLoaded = true;
+    }
+  }
+  // Try to enable audio alert for mentions
+  let audio_allowed;
+  if( navigator.getAutoplayPolicy ) {
+    audio_allowed = navigator.getAutoplayPolicy("audiocontext") == "allowed";
+  } else {
+    var promise = audioNewMention.play();
+    if( promise != undefined ) {
+      promise.catch(err => {audio_allowed = false;})
+    } else {
+      audio_allowed = false;
+    }
+    audioNewMention.pause();
+    audioNewMention.currentTime = 0;
+  }
+  
+  // Try to enable notifications for mentions
+  if ( "Notification" in window && Notification.permission !== "granted"
+    && Notification.permission !== "denied") 
+  {
+    Notification.requestPermission();}
+    
+  if( !audio_allowed ) {
+    createMessage("It looks like you have autoplay disabled. Please enable autoplay if you wish to hear alerts.")
+  }
+});
+
 socket.on("receive-message", (message, user) => {
   const isMention = createMessage(message, user);
   if( isMention ) {
@@ -79,35 +121,15 @@ socket.on("receive-message", (message, user) => {
 
 sendButton.addEventListener("click", () => {
   if (textBox.value != "") {
-    socket.emit("send-message", textBox.value, userId);
-    createMessage(textBox.value, true);
-    textBox.value = "";
+    socket.emit("send-message", textBox.value, userId, (response) => {
+      if( response.ok ) {
+        // Display the message sent by this user in their own browser
+        createMessage(textBox.value, true);
+        textBox.value = "";
+      } else {
+        // Inform the user that their message was not sent.
+        createMessage(response.error);
+      }
+    });
   }
 });
-
-// Try to warn the user if they need to enable audio autoplay
-window.onload = function () {
-  // Try to enable audio alert for mentions
-  let audio_allowed;
-  if( navigator.getAutoplayPolicy ) {
-    audio_allowed = navigator.getAutoplayPolicy("audiocontext") == "allowed";
-  } else {
-    var promise = audioNewMention.play();
-    if( promise != undefined ) {
-      promise.catch(err => {audio_allowed = false;})
-    } else {
-      audio_allowed = false;
-    }
-    audioNewMention.pause();
-    audioNewMention.currentTime = 0;
-  }
-  if( !audio_allowed ) {
-    createMessage("It looks like you have autoplay disabled. Please enable autoplay if you wish to hear alerts.")
-  }
-  
-  // Try to enable notifications for mentions
-  if ( "Notification" in window && Notification.permission !== "granted"
-    && Notification.permission !== "denied") 
-  {
-    Notification.requestPermission();}
-};

@@ -11,27 +11,52 @@ const get_client = () => {
 };
 
 const do_query = async (query, ...args) => {
-  const client = get_client();
-  await client.connect();
-  const res = await client.query(query, ...args);
-  var rows = res.rows;
-  await client.end();
-  return rows;
+  let res;
+  let client;
+  try {
+    client = get_client();
+    await client.connect();
+    res = await client.query(query, ...args);
+  } catch (error) {
+      console.error(error.stack);
+      res = false;
+  } finally {
+      if( client ) {
+        await client.end();
+      }
+      return res;
+  }
+};
+
+const rows_query = async (query, ...args) => {
+  const res = await do_query(query, ...args);
+  if( res ) {
+    return res.rows;
+  }
+  return false;
 };
 
 const get_user = async (userId) => {
-  var user_rows = await do_query(
+  var res = await do_query(
     'SELECT id, user_name FROM users WHERE id = $1', [userId]);
   
-  if( user_rows && user_rows.length == 1 ) {
+  if( res && res.rows.length == 1 ) {
     user = {
-        id: user_rows[0].id, userName: user_rows[0].user_name};
+        id: res.rows[0].id, userName: res.rows[0].user_name};
     return { user: user };
-  } else if( user_rows.length > 1) {
+  } else if( res.rows.length > 1) {
     return { error: 'found multiple matching users' };
   } else {
     return { error: 'failed to load user' };
   }
 }
 
-module.exports = { get_client, do_query, get_user };
+const insert_message = async (content, from_user_id) => {
+  var res = await do_query(
+    "INSERT INTO messages (content, from_user_id) " +
+    "VALUES ($1::text, $2);", [content, from_user_id]);
+  return res != false;
+}
+
+
+module.exports = { get_client, do_query, rows_query, get_user, insert_message };

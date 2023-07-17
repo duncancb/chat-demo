@@ -8,7 +8,7 @@ const { Server } = require("socket.io");
 // var debug = require('debug')('chat-room:server');
 var http = require('http');
 var app = require('../src/app');
-var { get_user } = require('../src/db.js');
+var { get_user, insert_message, rows_query } = require('../src/db.js');
 var { Channel } = require('../src/channel.js');
 
 /**
@@ -51,21 +51,35 @@ socketIO.on("connection", async (socket) => {
     channel.setUser(user, socket);
   } else if(socket.id != socket_id) {
     // The user has an active socket
-    console.log(registered_socket.id);
     socket.emit("connection-refused", "User is already connected");
     socket.disconnect();
     return;
   }
   
+  // Load all saved messages so that they can be redisplayed
+  const oldMessages = await rows_query(
+    'SELECT content, from_user_id, user_name ' +
+    'FROM messages JOIN users ON users.id = from_user_id ' +
+    'ORDER BY messages.id');
+  // Send the saved messages to the client
+  socket.emit("old-messages-ready", oldMessages);
   // join room
   socket.join(channel.id);
   
-  socket.on("send-message", (message, userId) => {
+  socket.on("send-message", async (message, userId, callback) => {
+    var ok=false, error=null;
     const user = channel.getUser(userId);
     if( user ) {
-      socket.to(channel.id).emit("receive-message", message, user.user);
+      ok = await insert_message(message, user.user.id);
+      if( ok ) {
+        socket.to(channel.id).emit("receive-message", message, user.user);
+      } else {
+        error = "Failed to save and send message";
+      }
+    } else {
+      error = "Failed to send message; please try reconnecting";
     }
-    // TODO - handle unknown user message
+    callback({ok: ok, error: error});
   });
 
   socket.on("disconnect", () => {
