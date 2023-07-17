@@ -1,0 +1,7 @@
+# By default, ignore everything
+*
+# Add exception for the directories to include in the context
+!bin
+!src
+!package.json
+!package-lock.json*

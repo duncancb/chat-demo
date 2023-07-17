@@ -47,6 +47,8 @@ function createMessage(text, user=null) {
   messageElement.appendChild(subMessageElement);
 
   messageBox.appendChild(messageElement);
+  subMessageElement.scrollIntoView(false);
+  messageBox.scrollTop = messageBox.scrollHeight;
   return isMention;
 }
 

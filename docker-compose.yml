@@ -1,5 +1,18 @@
 version: '3.8'
 services: 
+  web_app:
+    container_name: 'chat-server'
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      CHAT_POSTGRES_HOST: '172.17.0.1'
+      CHAT_POSTGRES_PORT: ${CHAT_POSTGRES_PORT:-5431}
+    env_file:
+      - ./env/${APP_MODE:-dev}/app_database
+    ports:
+      - '3000:3000'
   db:
     image: postgres:14.8
     restart: always

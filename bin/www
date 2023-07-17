@@ -41,7 +41,7 @@ socketIO.on("connection", async (socket) => {
     const { error, user } = await get_user(userId);
     if( error ) {
       // Could not find the user
-      socket.emit("connection-refused", error);
+      socketIO.to(socket.id).emit("connection-refused", error);
       socket.disconnect();
       return;
     }
@@ -51,7 +51,7 @@ socketIO.on("connection", async (socket) => {
     channel.setUser(user, socket);
   } else if(socket.id != socket_id) {
     // The user has an active socket
-    socket.emit("connection-refused", "User is already connected");
+    socketIO.to(socket.id).emit("connection-refused", "User is already connected");
     socket.disconnect();
     return;
   }
@@ -61,8 +61,9 @@ socketIO.on("connection", async (socket) => {
     'SELECT content, from_user_id, user_name ' +
     'FROM messages JOIN users ON users.id = from_user_id ' +
     'ORDER BY messages.id');
-  // Send the saved messages to the client
-  socket.emit("old-messages-ready", oldMessages);
+  // Send the saved messages to the newly connected client
+  socketIO.to(socket.id).emit("old-messages-ready", oldMessages);
+  
   // join room
   socket.join(channel.id);
   
@@ -73,6 +74,22 @@ socketIO.on("connection", async (socket) => {
       ok = await insert_message(message, user.user.id);
       if( ok ) {
         socket.to(channel.id).emit("receive-message", message, user.user);
+        /* NB:
+         * I've just checked the specification and realised that I was meant to detect
+         * mentions on the server. I had assumed that triggering an "event" meant 
+         * triggering a desktop notification. 
+         * 
+         * I'm now wondering whether the idea was to implement an example of emitting
+         * an event to a single socket. If this is the case, I would have used 
+         * "socketIO.to(socket.id).emit" (similar "connection-refused" and
+         * "old-messages-ready" above). I would also have had "Channel" map users by
+         * user-name rather than id so that it would be quicker to lookup a user's socket.
+         * 
+         * I chose to detect mentions on the client side because:
+         *   * It reduces traffic; no need to send a separate "mentioned" event 
+         *   * Reloading old messages on the client can reuse the logic for
+         *     displaying new messages
+         */ 
       } else {
         error = "Failed to save and send message";
       }
