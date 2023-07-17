@@ -4,10 +4,12 @@
  * Module dependencies.
  */
 
-var app = require('../src/app');
 const { Server } = require("socket.io");
 // var debug = require('debug')('chat-room:server');
 var http = require('http');
+var app = require('../src/app');
+var { get_user } = require('../src/db.js');
+var { Channel } = require('../src/channel.js');
 
 /**
  * Get port from environment and store in Express.
@@ -27,20 +29,51 @@ var server = http.createServer(app);
  */
  
 var socketIO = new Server(server);
+var channel = new Channel('TheOnlyRoom');
 
 socketIO.on("connection", async (socket) => {
-  const roomID = "TheOnlyRoom" // await room.joinRoom();
+  const userId = parseInt(socket.handshake.query['userId']);
+  // Check whether the user has already joined the channel
+  var { user, socket_id } = channel.getUser(userId)
+  var registered_socket = socketIO.sockets.sockets.get(socket_id);
+  if( !user ) {
+    // The user has not yet joined the channel
+    const { error, user } = await get_user(userId);
+    if( error ) {
+      // Could not find the user
+      socket.emit("connection-refused", error);
+      socket.disconnect();
+      return;
+    }
+    channel.setUser(user, socket);
+  } else if( !registered_socket ) {
+    // The user's connection has failed/closed so use the new socket
+    channel.setUser(user, socket);
+  } else if(socket.id != socket_id) {
+    // The user has an active socket
+    console.log(registered_socket.id);
+    socket.emit("connection-refused", "User is already connected");
+    socket.disconnect();
+    return;
+  }
+  
   // join room
-  socket.join(roomID);
-
-  socket.on("send-message", (message) => {
-    socket.to(roomID).emit("receive-message", message);
+  socket.join(channel.id);
+  
+  socket.on("send-message", (message, userId) => {
+    const user = channel.getUser(userId);
+    if( user ) {
+      socket.to(channel.id).emit("receive-message", message, user.user);
+    }
+    // TODO - handle unknown user message
   });
 
-  /*socket.on("disconnect", () => {
-    // leave room
-    room.leaveRoom(roomID);
-  });*/
+  socket.on("disconnect", () => {
+    const user = channel.getSocketUser(socket.id);
+    if( user ) {
+      channel.removeUser(user.id);
+    }
+  });
 });
 
 
