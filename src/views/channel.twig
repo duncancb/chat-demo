@@ -14,7 +14,9 @@
 	<audio id="audio-new-mention" preload="auto">  
 	  <source src="/sounds/new_mention.wav" type="audio/wav">  
 	  Your browser does not support audio alerts.  
-	</audio>  
+  </audio>  
+	
+  <!-- START: Taken from https://hackernoon.com/build-a-chat-room-with-socketio-and-express -->
   <div class="flex-1 p:2 sm:p-6 justify-between flex flex-col h-screen h-full">
     <div id="messages" class="flex flex-col space-y-4 p-3 overflow-y-scroll scrollbar-thumb-blue scrollbar-thumb-rounded scrollbar-track-blue-lighter scrollbar-w-2 scrolling-touch">
     </div>
@@ -33,5 +35,7 @@
     </div>
   </div>
   <script src="/socket.io/socket.io.js"></script>
+  <!-- END: Taken from https://hackernoon.com/build-a-chat-room-with-socketio-and-express -->
+  
   <script src="/javascripts/chat-client.js"></script>
 {% endblock %}

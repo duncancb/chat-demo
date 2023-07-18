@@ -1,31 +1,66 @@
+/* The original code for this file was taken from 
+ * "https://hackernoon.com/build-a-chat-room-with-socketio-and-express".
+ * I have added these variables and functions:
+ *   * audioNewMention
+ *   * messagesLoaded
+ *   * isMentionCheck(text, userName)
+ *   * "connection-refused" event handler
+ *   * "old-messages-ready" event handler
+ * 
+ * I have modified these functions:
+ *   * createMessage
+ *     - added code to detect mentions
+ *     - added separate styling for system messages, and mentions
+ *     - added user names to messages received
+ *   * "receive-message" event handler
+ *     - detect mentions
+ *     - trigger mention notification
+ *   * "send-message" event handler
+ *     - Added a callback to confirm that message was sent and saved
+ *     - Display a system message if message was not sent  
+ */
 const messageBox = document.querySelector("#messages");
 const textBox = document.querySelector("input");
 const sendButton = document.querySelector("button");
 const audioNewMention = document.querySelector("#audio-new-mention");
 var messagesLoaded = false;
 
+/** Return true if "text" mentions "@userName".
+ * */
+ 
 function isMentionCheck(text, userName) {
   userName = userName.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
   index = text.search(new RegExp("\\b"+userName+"\\b", "i"));
   return index > 0 && text[index - 1] == '@';
 }
 
+/** Add a message to the browser view. Check whether the message is:
+ *   * a system message - display as a centered grey box
+ *   * an incoming message - display in left hand amber box
+ *   * a mention - diplay in indented left hand green box
+ *   * an outgoing message - display in right hand blue box
+ * */
+ 
 function createMessage(text, user=null) {
+  // Check for a mention of this user
   const isMention = isMentionCheck(text, userName);
+  
+  
   const messageElement = document.createElement("div");
   messageElement.className = "chat-message";
   const subMessageElement = document.createElement("div");
   subMessageElement.className ="px-4 py-4 rounded-lg inline-block rounded-bl-none";
+  // make the target text element swappable
   var textElement = subMessageElement;
   if( user === null) {
-    // System message/warning to the user
+    // system message/warning to the user
     messageElement.className = "flex justify-center items-center"
     subMessageElement.className += " bg-gray-300 text-gray-600";
   } else if( user === true || user.id == userId ) {
     // This is the user's own message - display it on the right
     subMessageElement.className += " float-right bg-blue-800 text-white";
   } else {
-    // Display message from another user on the left
+    // Display incomming message on the left
     const subMessageTitle = document.createElement("b");
     subMessageTitle.innerText = `${user.userName}:`;
     
@@ -43,10 +78,13 @@ function createMessage(text, user=null) {
     textElement = document.createElement("div");
     subMessageElement.appendChild(textElement);
   }
+  
   textElement.innerText = text;
   messageElement.appendChild(subMessageElement);
 
   messageBox.appendChild(messageElement);
+  
+  // Scroll to most recent message
   subMessageElement.scrollIntoView(false);
   messageBox.scrollTop = messageBox.scrollHeight;
   return isMention;
@@ -114,8 +152,7 @@ socket.on("receive-message", (message, user) => {
     // Send a notification if possible
     if (Notification.permission === "granted") {
       const notification = new Notification(
-        `${user.userName} has messaged you in chat`
-);
+        `${user.userName} has messaged you in chat`);
       
       // Add click listener that will perform a window focus
       notification.onclick = function (x) {
