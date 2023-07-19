@@ -33,12 +33,14 @@ A simple chat app which allows multiple users to:
 
 ### Possible improvements
 
-* Rebuild front end using React and Graphql
-* Add login and auth
-* Implement unit tests
+* Rebuild front end using React and Graphql.
+* Add login and auth.
+* Implement unit tests.
 * Fix bug where messages do not scroll to the bottom on reload. It is possible that the page is not fully loaded when the messages are repopulated.
-* Add configuration for production environment
+* Add configuration for production environment.
 * Fix docker-compose network configuration. Currently the default bridge is used to connect to postgres.
+* Move database passwords to docker secrets.
+* When reloading old messages, place a limit on the messages reloaded; eg: only load messages from the last week.
 
 ### Third party resources and code
 
